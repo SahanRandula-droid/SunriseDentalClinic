@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Help - Sunrise Dental Clinic</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header id="app-header"></header>
+
+<main class="container">
+    <div class="page-head">
+        <h1>Help for New Staff</h1>
+        <p>Step-by-step instructions for every task in the system.</p>
+    </div>
+
+    <nav class="card no-print" aria-label="Help topics">
+        <ul class="toc">
+            <li><a href="#login">Logging in</a></li>
+            <li><a href="#register">Register an appointment</a></li>
+            <li><a href="#search">Find an appointment</a></li>
+            <li><a href="#bill">Calculate and print a bill</a></li>
+            <li><a href="#cancel">Cancel an appointment</a></li>
+            <li><a href="#schedule">Daily schedule</a></li>
+            <li><a href="#reports">Reports</a></li>
+            <li><a href="#exit">Exit safely</a></li>
+            <li><a href="#problems">Common messages</a></li>
+        </ul>
+    </nav>
+
+    <section class="card help-section" id="login">
+        <h2>1. Logging in</h2>
+        <ol>
+            <li>Open the system in your web browser. The login page appears.</li>
+            <li>Type your <strong>username</strong> and <strong>password</strong>, then click <strong>Log In</strong>.</li>
+            <li>Tick <em>Remember my username</em> if you always use this computer. Your password is never remembered.</li>
+            <li>If you do nothing for 30 minutes you are logged out automatically and must log in again.</li>
+        </ol>
+        <p class="muted">Never share your password. Everything you save is recorded under your username.</p>
+    </section>
+
+    <section class="card help-section" id="register">
+        <h2>2. Register a new appointment</h2>
+        <ol>
+            <li>On the Main Menu choose <strong>Register New Appointment</strong>.</li>
+            <li>Type the patient's <strong>name</strong>, <strong>contact number</strong> (10 digits starting with 0, for example 0771234567) and <strong>address</strong>.</li>
+            <li>Choose the <strong>dentist</strong> and the <strong>treatment type</strong>. The estimated cost appears below the form.</li>
+            <li>Choose the <strong>date</strong> (today or later, up to 180 days ahead) and the <strong>time</strong> (8:00 AM to 7:30 PM).</li>
+            <li>Click <strong>Save Appointment</strong>.</li>
+            <li>The system shows the new <strong>appointment number</strong> (for example APT-2026-0001). Write it on the patient's card.</li>
+        </ol>
+        <p class="muted">A dentist cannot have two patients at the same time. If the time is taken, the system tells you and you choose another time.</p>
+    </section>
+
+    <section class="card help-section" id="search">
+        <h2>3. Display appointment details</h2>
+        <ol>
+            <li>On the Main Menu choose <strong>Display Appointment Details</strong>.</li>
+            <li>Type the appointment number and click <strong>Search</strong> (or press <kbd>Enter</kbd>).</li>
+            <li>The patient and appointment information is shown, together with the status: BOOKED, COMPLETED or CANCELLED.</li>
+        </ol>
+    </section>
+
+    <section class="card help-section" id="bill">
+        <h2>4. Calculate and print a bill</h2>
+        <ol>
+            <li>On the Main Menu choose <strong>Calculate and Print Bill</strong>.</li>
+            <li>Type the appointment number and click <strong>Find Appointment</strong>.</li>
+            <li>Choose a <strong>discount</strong> if the patient qualifies (senior citizen 10%, child 5%). The total updates straight away.</li>
+            <li>Check the amounts: <em>Total = treatment cost + consultation fee - discount</em>.</li>
+            <li>Click <strong>Save Bill and Show Receipt</strong> and confirm.</li>
+            <li>Click <strong>Print Bill</strong> and hand the receipt to the patient.</li>
+        </ol>
+        <p class="muted">A bill can be saved only once. To print it again later, search for the same appointment number on this page.</p>
+    </section>
+
+    <section class="card help-section" id="cancel">
+        <h2>5. Cancel an appointment</h2>
+        <ol>
+            <li>Find the appointment (see section 3).</li>
+            <li>Click <strong>Cancel Appointment</strong> and confirm.</li>
+            <li>The status changes to CANCELLED and the time slot becomes free for another patient.</li>
+        </ol>
+        <p class="muted">Only a BOOKED appointment can be cancelled. A cancelled appointment cannot be billed or re-opened; register a new one instead.</p>
+    </section>
+
+    <section class="card help-section" id="schedule">
+        <h2>6. Daily schedule</h2>
+        <ol>
+            <li>On the Main Menu choose <strong>Daily Schedule</strong>. Today's appointments are shown.</li>
+            <li>To see another day, choose the date and click <strong>Show Schedule</strong>.</li>
+            <li>Click an appointment number to open its details, or click <strong>Print</strong> for a paper copy.</li>
+        </ol>
+    </section>
+
+    <section class="card help-section" id="reports">
+        <h2>7. Reports (administrators only)</h2>
+        <ol>
+            <li>On the Main Menu choose <strong>Reports</strong>.</li>
+            <li>Choose the <strong>From</strong> and <strong>To</strong> dates and click <strong>Show Reports</strong>.</li>
+            <li><em>Revenue by treatment type</em> shows the income from each treatment.</li>
+            <li><em>Dentist workload</em> shows how many appointments each dentist had and how many were cancelled.</li>
+        </ol>
+    </section>
+
+    <section class="card help-section" id="exit">
+        <h2>8. Exit the system safely</h2>
+        <ol>
+            <li>Click <strong>Exit System</strong> at the top right of any page (or on the Main Menu).</li>
+            <li>Confirm by clicking <strong>Yes, exit</strong>.</li>
+            <li>Wait for the message "You have exited safely", then close the browser window.</li>
+        </ol>
+        <p class="muted">Always exit before leaving the desk so that nobody else can use your login.</p>
+    </section>
+
+    <section class="card help-section" id="problems">
+        <h2>Common messages and what to do</h2>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Message</th><th>What it means</th><th>What to do</th></tr></thead>
+                <tbody>
+                <tr><td>Invalid username or password.</td><td>The login details do not match.</td><td>Check Caps Lock and try again. Ask the administrator to reset your password if needed.</td></tr>
+                <tr><td>The dentist already has an appointment...</td><td>That time slot is taken.</td><td>Pick another time or another dentist.</td></tr>
+                <tr><td>No appointment found with number...</td><td>The number does not exist.</td><td>Check the number on the patient's card. The format is APT-year-number.</td></tr>
+                <tr><td>A bill has already been generated...</td><td>The visit was billed earlier.</td><td>Search for it on the billing page to print the saved bill.</td></tr>
+                <tr><td>Your session has ended.</td><td>You were idle for 30 minutes.</td><td>Log in again.</td></tr>
+                <tr><td>Cannot reach the server.</td><td>The server or network is down.</td><td>Tell the administrator.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script src="js/common.js"></script>
+<script>
+    initPage('help').catch(function () { });
+</script>
+</body>
+</html>

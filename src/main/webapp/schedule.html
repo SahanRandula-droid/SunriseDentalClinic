@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Daily Schedule - Sunrise Dental Clinic</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header id="app-header"></header>
+
+<main class="container">
+    <div class="page-head">
+        <h1>Daily Schedule</h1>
+        <p>All appointments for one day, in time order. Click a number to open the full details.</p>
+    </div>
+
+    <form class="card inline-form no-print" id="date-form" novalidate>
+        <div class="field">
+            <label for="date">Date</label>
+            <input type="date" id="date" name="date">
+        </div>
+        <button type="submit" class="btn">Show Schedule</button>
+        <button type="button" class="btn secondary" onclick="window.print()">Print</button>
+    </form>
+
+    <div id="message" class="hidden"></div>
+
+    <section class="card">
+        <h2 id="list-title">Appointments</h2>
+        <div class="stats">
+            <div class="stat"><b id="s-total">0</b><span>Total</span></div>
+            <div class="stat"><b id="s-booked">0</b><span>Booked</span></div>
+            <div class="stat"><b id="s-completed">0</b><span>Completed</span></div>
+            <div class="stat"><b id="s-cancelled">0</b><span>Cancelled</span></div>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Time</th><th>Appointment no.</th><th>Patient</th><th>Contact</th>
+                    <th>Dentist</th><th>Treatment</th><th>Status</th>
+                </tr>
+                </thead>
+                <tbody id="rows"></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script src="js/common.js"></script>
+<script>
+    const form = document.getElementById('date-form');
+    const message = document.getElementById('message');
+    const rows = document.getElementById('rows');
+
+    function count(list, status) {
+        return list.filter(function (a) { return a.status === status; }).length;
+    }
+
+    async function load() {
+        hideMessage(message);
+        const date = form.elements.date.value;
+        if (!date) {
+            showMessage(message, 'error', 'Please choose a date.');
+            return;
+        }
+        try {
+            const list = await api('GET', 'api/appointments?date=' + encodeURIComponent(date));
+            document.getElementById('list-title').textContent = 'Appointments on ' + formatDate(date);
+            document.getElementById('s-total').textContent = list.length;
+            document.getElementById('s-booked').textContent = count(list, 'BOOKED');
+            document.getElementById('s-completed').textContent = count(list, 'COMPLETED');
+            document.getElementById('s-cancelled').textContent = count(list, 'CANCELLED');
+
+            if (list.length === 0) {
+                rows.innerHTML = '<tr><td colspan="7" class="muted">No appointments are booked for this day.</td></tr>';
+                return;
+            }
+            rows.innerHTML = list.map(function (a) {
+                return '<tr>' +
+                    '<td class="nowrap">' + formatTime(a.appointmentTime) + '</td>' +
+                    '<td class="nowrap"><a href="search.html?no=' + encodeURIComponent(a.appointmentNo) + '">' +
+                    escapeHtml(a.appointmentNo) + '</a></td>' +
+                    '<td>' + escapeHtml(a.patient.patientName) + '</td>' +
+                    '<td>' + escapeHtml(a.patient.contactNumber) + '</td>' +
+                    '<td>' + escapeHtml(a.dentist.dentistName) + '</td>' +
+                    '<td>' + escapeHtml(a.treatment.treatmentName) + '</td>' +
+                    '<td>' + statusBadge(a.status) + '</td>' +
+                    '</tr>';
+            }).join('');
+        } catch (error) {
+            showMessage(message, 'error', error.message);
+        }
+    }
+
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        load();
+    });
+
+    initPage('schedule').then(function () {
+        form.elements.date.value = toIsoDate();
+        load();
+    }).catch(function () { });
+</script>
+</body>
+</html>

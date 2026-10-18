@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Calculate and Print Bill - Sunrise Dental Clinic</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header id="app-header"></header>
+
+<main class="container">
+    <div class="page-head no-print">
+        <h1>Calculate and Print Bill</h1>
+        <p>Total = treatment cost + consultation fee - discount. Each appointment is billed once.</p>
+    </div>
+
+    <form class="card inline-form no-print" id="search-form" novalidate>
+        <div class="field">
+            <label for="appointmentNo">Appointment number</label>
+            <input type="text" id="appointmentNo" name="appointmentNo" maxlength="15" placeholder="APT-2026-0001"
+                   autocomplete="off" style="text-transform:uppercase">
+        </div>
+        <button type="submit" class="btn">Find Appointment</button>
+    </form>
+
+    <div id="message" class="hidden no-print"></div>
+
+    <section class="card hidden no-print" id="calc-card">
+        <h2>Bill calculation for <span id="c-number"></span></h2>
+        <dl class="details">
+            <dt>Patient</dt><dd id="c-patient"></dd>
+            <dt>Dentist</dt><dd id="c-dentist"></dd>
+            <dt>Treatment type</dt><dd id="c-treatment"></dd>
+            <dt>Visit</dt><dd id="c-visit"></dd>
+        </dl>
+
+        <div class="field" style="max-width:340px; margin-top:1rem">
+            <label for="discountCode">Discount</label>
+            <select id="discountCode"></select>
+        </div>
+
+        <div class="table-wrap" style="max-width:480px; margin-top:0.8rem">
+            <table>
+                <tbody>
+                <tr><td>Treatment cost</td><td class="num" id="c-cost"></td></tr>
+                <tr><td>Consultation fee</td><td class="num" id="c-fee"></td></tr>
+                <tr><td>Discount</td><td class="num" id="c-discount"></td></tr>
+                </tbody>
+                <tfoot>
+                <tr><td>Total to pay</td><td class="num" id="c-total"></td></tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="actions">
+            <button type="button" class="btn accent" id="generate-button">Save Bill and Show Receipt</button>
+            <a class="btn secondary" href="index.html">Back to Main Menu</a>
+        </div>
+    </section>
+
+    <section class="hidden" id="receipt-card">
+        <div class="receipt">
+            <div class="receipt-head">
+                <h2>Sunrise Dental Clinic</h2>
+                <p>Private Dental Centre, Colombo, Sri Lanka</p>
+            </div>
+            <div class="receipt-title">PATIENT BILL / RECEIPT</div>
+
+            <dl class="details">
+                <dt>Bill number</dt><dd id="b-number"></dd>
+                <dt>Bill date</dt><dd id="b-date"></dd>
+                <dt>Appointment no.</dt><dd id="b-appointment"></dd>
+                <dt>Patient name</dt><dd id="b-patient"></dd>
+                <dt>Address</dt><dd id="b-address"></dd>
+                <dt>Contact number</dt><dd id="b-contact"></dd>
+                <dt>Dentist</dt><dd id="b-dentist"></dd>
+                <dt>Visit date and time</dt><dd id="b-visit"></dd>
+            </dl>
+
+            <table>
+                <thead>
+                <tr><th>Description</th><th class="num">Amount</th></tr>
+                </thead>
+                <tbody>
+                <tr><td id="b-treatment"></td><td class="num" id="b-cost"></td></tr>
+                <tr><td>Consultation fee</td><td class="num" id="b-fee"></td></tr>
+                <tr><td>Subtotal</td><td class="num" id="b-subtotal"></td></tr>
+                <tr><td id="b-discount-label"></td><td class="num" id="b-discount"></td></tr>
+                <tr class="total-row"><td>TOTAL</td><td class="num" id="b-total"></td></tr>
+                </tbody>
+            </table>
+
+            <p class="receipt-foot">Prepared by <span id="b-by"></span>. Thank you for choosing Sunrise Dental Clinic.</p>
+        </div>
+
+        <div class="actions no-print" style="justify-content:center">
+            <button type="button" class="btn accent" onclick="window.print()">Print Bill</button>
+            <a class="btn secondary" href="billing.html">Bill Another Appointment</a>
+            <a class="btn secondary" href="index.html">Back to Main Menu</a>
+        </div>
+    </section>
+</main>
+
+<script src="js/common.js"></script>
+<script>
+    const form = document.getElementById('search-form');
+    const message = document.getElementById('message');
+    const calcCard = document.getElementById('calc-card');
+    const receiptCard = document.getElementById('receipt-card');
+    const discountSelect = document.getElementById('discountCode');
+    const generateButton = document.getElementById('generate-button');
+    let current = null;
+
+    function text(id, value) { document.getElementById(id).textContent = value; }
+
+    function showReceipt(bill) {
+        const a = bill.appointment;
+        const subtotal = Number(bill.treatmentCost) + Number(bill.consultationFee);
+        text('b-number', 'BILL-' + String(bill.billId).padStart(5, '0'));
+        text('b-date', formatDateTime(bill.generatedAt));
+        text('b-appointment', a.appointmentNo);
+        text('b-patient', a.patient.patientName);
+        text('b-address', a.patient.address);
+        text('b-contact', a.patient.contactNumber);
+        text('b-dentist', a.dentist.dentistName);
+        text('b-visit', formatDate(a.appointmentDate) + ' at ' + formatTime(a.appointmentTime));
+        text('b-treatment', 'Treatment: ' + a.treatment.treatmentName);
+        text('b-cost', formatMoney(bill.treatmentCost));
+        text('b-fee', formatMoney(bill.consultationFee));
+        text('b-subtotal', formatMoney(subtotal));
+        text('b-discount-label', bill.discountLabel || 'Discount');
+        text('b-discount', '- ' + formatMoney(bill.discountAmount));
+        text('b-total', formatMoney(bill.totalAmount));
+        text('b-by', bill.generatedBy);
+        calcCard.classList.add('hidden');
+        receiptCard.classList.remove('hidden');
+    }
+
+    async function refreshPreview() {
+        try {
+            const preview = await api('GET', 'api/bills/preview?appointmentNo=' +
+                encodeURIComponent(current.appointmentNo) + '&discountCode=' + encodeURIComponent(discountSelect.value));
+            text('c-cost', formatMoney(preview.treatmentCost));
+            text('c-fee', formatMoney(preview.consultationFee));
+            text('c-discount', '- ' + formatMoney(preview.discountAmount));
+            text('c-total', formatMoney(preview.totalAmount));
+        } catch (error) {
+            showMessage(message, 'error', error.message);
+        }
+    }
+
+    async function showCalculation(appointment) {
+        current = appointment;
+        text('c-number', appointment.appointmentNo);
+        text('c-patient', appointment.patient.patientName);
+        text('c-dentist', appointment.dentist.dentistName);
+        text('c-treatment', appointment.treatment.treatmentName);
+        text('c-visit', formatDate(appointment.appointmentDate) + ' at ' + formatTime(appointment.appointmentTime));
+        discountSelect.value = 'NONE';
+        await refreshPreview();
+        calcCard.classList.remove('hidden');
+    }
+
+    async function find(appointmentNo) {
+        hideMessage(message);
+        calcCard.classList.add('hidden');
+        receiptCard.classList.add('hidden');
+        const number = appointmentNo.trim().toUpperCase();
+        if (!number) {
+            showMessage(message, 'error', 'Please enter an appointment number.');
+            return;
+        }
+        if (!/^APT-\d{4}-\d{4,6}$/.test(number)) {
+            showMessage(message, 'error', 'Appointment number must look like APT-2026-0001.');
+            return;
+        }
+        try {
+            const appointment = await api('GET', 'api/appointments/' + encodeURIComponent(number));
+            if (appointment.status === 'CANCELLED') {
+                showMessage(message, 'warn', 'Appointment ' + number + ' was cancelled, so it cannot be billed.');
+            } else if (appointment.status === 'COMPLETED') {
+                showReceipt(await api('GET', 'api/bills/' + encodeURIComponent(number)));
+                showMessage(message, 'info', 'This appointment has already been billed. The saved bill is shown below.');
+            } else {
+                await showCalculation(appointment);
+            }
+        } catch (error) {
+            showMessage(message, error.status === 404 ? 'warn' : 'error', error.message);
+        }
+    }
+
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        find(form.elements.appointmentNo.value);
+    });
+
+    discountSelect.addEventListener('change', refreshPreview);
+
+    generateButton.addEventListener('click', async function () {
+        const sure = await confirmDialog('Save this bill?',
+            'The bill for ' + current.appointmentNo + ' will be saved and the appointment marked as completed. ' +
+            'A saved bill cannot be changed.', 'Yes, save bill');
+        if (!sure) { return; }
+        generateButton.disabled = true;
+        try {
+            const bill = await api('POST', 'api/bills',
+                { appointmentNo: current.appointmentNo, discountCode: discountSelect.value });
+            showReceipt(bill);
+            showMessage(message, 'success', 'Bill saved. Use the Print Bill button to print the receipt.');
+        } catch (error) {
+            showMessage(message, 'error', error.message);
+        } finally {
+            generateButton.disabled = false;
+        }
+    });
+
+    initPage('billing').then(async function () {
+        const discounts = await api('GET', 'api/discounts');
+        discountSelect.innerHTML = discounts.map(function (d) {
+            return '<option value="' + escapeHtml(d.code) + '">' + escapeHtml(d.label) + '</option>';
+        }).join('');
+
+        const fromLink = queryParam('no');
+        if (fromLink) {
+            form.elements.appointmentNo.value = fromLink;
+            find(fromLink);
+        } else {
+            form.elements.appointmentNo.focus();
+        }
+    }).catch(function (error) {
+        if (error.status !== 401) { showMessage(message, 'error', error.message); }
+    });
+</script>
+</body>
+</html>

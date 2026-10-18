@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reports - Sunrise Dental Clinic</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header id="app-header"></header>
+
+<main class="container">
+    <div class="page-head">
+        <h1>Management Reports</h1>
+        <p>Figures to support decisions about pricing, staffing and opening hours.</p>
+    </div>
+
+    <form class="card inline-form no-print" id="range-form" novalidate>
+        <div class="field">
+            <label for="from">From date</label>
+            <input type="date" id="from" name="from">
+        </div>
+        <div class="field">
+            <label for="to">To date</label>
+            <input type="date" id="to" name="to">
+        </div>
+        <button type="submit" class="btn">Show Reports</button>
+        <button type="button" class="btn secondary" onclick="window.print()">Print</button>
+    </form>
+
+    <div id="message" class="hidden"></div>
+
+    <section class="card">
+        <h2>Revenue by treatment type <span class="muted" id="range-1"></span></h2>
+        <p class="muted">Based on bills generated in the period. Shows which treatments bring in the most income.</p>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr><th>Treatment</th><th class="num">Bills</th><th class="num">Discounts given</th>
+                    <th class="num">Revenue</th><th style="width:28%">Share of revenue</th></tr>
+                </thead>
+                <tbody id="revenue-rows"></tbody>
+                <tfoot id="revenue-foot"></tfoot>
+            </table>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>Dentist workload <span class="muted" id="range-2"></span></h2>
+        <p class="muted">Based on appointment dates in the period. Shows how busy each dentist is and how many visits are cancelled.</p>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr><th>Dentist</th><th>Specialization</th><th class="num">Booked</th><th class="num">Completed</th>
+                    <th class="num">Cancelled</th><th class="num">Total</th><th class="num">Cancelled %</th></tr>
+                </thead>
+                <tbody id="workload-rows"></tbody>
+                <tfoot id="workload-foot"></tfoot>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script src="js/common.js"></script>
+<script>
+    const form = document.getElementById('range-form');
+    const message = document.getElementById('message');
+
+    function renderRevenue(list) {
+        const body = document.getElementById('revenue-rows');
+        const foot = document.getElementById('revenue-foot');
+        if (list.length === 0) {
+            body.innerHTML = '<tr><td colspan="5" class="muted">No bills were generated in this period.</td></tr>';
+            foot.innerHTML = '';
+            return;
+        }
+        const totalRevenue = list.reduce(function (sum, r) { return sum + Number(r.totalRevenue); }, 0);
+        const totalDiscount = list.reduce(function (sum, r) { return sum + Number(r.totalDiscount); }, 0);
+        const totalBills = list.reduce(function (sum, r) { return sum + r.billCount; }, 0);
+        body.innerHTML = list.map(function (r) {
+            const share = totalRevenue > 0 ? (Number(r.totalRevenue) / totalRevenue) * 100 : 0;
+            return '<tr><td>' + escapeHtml(r.treatmentName) + '</td>' +
+                '<td class="num">' + r.billCount + '</td>' +
+                '<td class="num">' + formatMoney(r.totalDiscount) + '</td>' +
+                '<td class="num">' + formatMoney(r.totalRevenue) + '</td>' +
+                '<td><div class="bar" style="width:' + share.toFixed(1) + '%"></div>' +
+                '<span class="muted">' + share.toFixed(1) + '%</span></td></tr>';
+        }).join('');
+        foot.innerHTML = '<tr><td>Total</td><td class="num">' + totalBills + '</td><td class="num">' +
+            formatMoney(totalDiscount) + '</td><td class="num">' + formatMoney(totalRevenue) + '</td><td></td></tr>';
+    }
+
+    function renderWorkload(list) {
+        const body = document.getElementById('workload-rows');
+        const foot = document.getElementById('workload-foot');
+        const sum = { booked: 0, completed: 0, cancelled: 0 };
+        body.innerHTML = list.map(function (r) {
+            const total = r.booked + r.completed + r.cancelled;
+            const cancelledPercent = total > 0 ? ((r.cancelled / total) * 100).toFixed(1) + '%' : '-';
+            sum.booked += r.booked;
+            sum.completed += r.completed;
+            sum.cancelled += r.cancelled;
+            return '<tr><td>' + escapeHtml(r.dentistName) + '</td><td>' + escapeHtml(r.specialization) + '</td>' +
+                '<td class="num">' + r.booked + '</td><td class="num">' + r.completed + '</td>' +
+                '<td class="num">' + r.cancelled + '</td><td class="num">' + total + '</td>' +
+                '<td class="num">' + cancelledPercent + '</td></tr>';
+        }).join('');
+        const all = sum.booked + sum.completed + sum.cancelled;
+        foot.innerHTML = '<tr><td colspan="2">Total</td><td class="num">' + sum.booked + '</td><td class="num">' +
+            sum.completed + '</td><td class="num">' + sum.cancelled + '</td><td class="num">' + all + '</td>' +
+            '<td class="num">' + (all > 0 ? ((sum.cancelled / all) * 100).toFixed(1) + '%' : '-') + '</td></tr>';
+    }
+
+    async function load() {
+        hideMessage(message);
+        const from = form.elements.from.value;
+        const to = form.elements.to.value;
+        if (!from || !to) {
+            showMessage(message, 'error', 'Please choose both dates.');
+            return;
+        }
+        if (from > to) {
+            showMessage(message, 'error', 'The From date must be on or before the To date.');
+            return;
+        }
+        const query = '?from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to);
+        const label = '(' + formatDate(from) + ' to ' + formatDate(to) + ')';
+        try {
+            const revenue = await api('GET', 'api/reports/revenue' + query);
+            const workload = await api('GET', 'api/reports/workload' + query);
+            document.getElementById('range-1').textContent = label;
+            document.getElementById('range-2').textContent = label;
+            renderRevenue(revenue);
+            renderWorkload(workload);
+        } catch (error) {
+            showMessage(message, 'error', error.message);
+        }
+    }
+
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        load();
+    });
+
+    initPage('reports').then(function () {
+        const today = new Date();
+        form.elements.from.value = toIsoDate(new Date(today.getFullYear(), today.getMonth(), 1));
+        form.elements.to.value = toIsoDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+        load();
+    }).catch(function () { });
+</script>
+</body>
+</html>

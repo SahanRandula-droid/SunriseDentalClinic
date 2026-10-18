@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Staff Login - Sunrise Dental Clinic</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main class="center-page">
+    <div class="login-card">
+        <div class="login-brand">
+            <span id="logo"></span>
+            <h1>Sunrise Dental Clinic</h1>
+            <p class="muted">Appointment &amp; Patient Management System</p>
+        </div>
+
+        <div id="message" class="hidden"></div>
+
+        <form id="login-form" novalidate>
+            <div class="field">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" maxlength="30" autocomplete="username">
+                <div class="field-error"></div>
+            </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" maxlength="100" autocomplete="current-password">
+                <div class="field-error"></div>
+            </div>
+            <label class="check">
+                <input type="checkbox" id="rememberMe" name="rememberMe">
+                Remember my username on this computer
+            </label>
+            <button type="submit" class="btn" id="login-button">Log In</button>
+        </form>
+
+        <p class="login-foot">Authorised clinic staff only.</p>
+    </div>
+</main>
+
+<script src="js/common.js"></script>
+<script>
+    const form = document.getElementById('login-form');
+    const message = document.getElementById('message');
+    const button = document.getElementById('login-button');
+    document.getElementById('logo').innerHTML = LOGO_SVG;
+
+    function readCookie(name) {
+        const found = document.cookie.split('; ').find(function (part) { return part.startsWith(name + '='); });
+        return found ? decodeURIComponent(found.substring(name.length + 1)) : '';
+    }
+
+    const remembered = readCookie('sdc_last_user');
+    if (remembered) {
+        form.elements.username.value = remembered;
+        form.elements.rememberMe.checked = true;
+        form.elements.password.focus();
+    } else {
+        form.elements.username.focus();
+    }
+
+    if (queryParam('expired')) {
+        showMessage(message, 'info', 'Your session has ended. Please log in again.');
+    }
+
+    form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        hideMessage(message);
+
+        const username = form.elements.username.value.trim();
+        const password = form.elements.password.value;
+        const errors = {};
+        if (!username) { errors.username = 'Username is required.'; }
+        if (!password) { errors.password = 'Password is required.'; }
+        showFieldErrors(form, errors);
+        if (Object.keys(errors).length > 0) { return; }
+
+        button.disabled = true;
+        button.textContent = 'Checking...';
+        try {
+            await api('POST', 'api/auth/login', {
+                username: username,
+                password: password,
+                rememberMe: form.elements.rememberMe.checked
+            });
+            location.replace('index.html');
+        } catch (error) {
+            showFieldErrors(form, error.fields);
+            showMessage(message, 'error', error.message);
+            form.elements.password.value = '';
+            form.elements.password.focus();
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Log In';
+        }
+    });
+</script>
+</body>
+</html>

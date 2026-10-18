@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Display Appointment Details - Sunrise Dental Clinic</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header id="app-header"></header>
+
+<main class="container">
+    <div class="page-head">
+        <h1>Display Appointment Details</h1>
+        <p>Type the appointment number given to the patient, for example APT-2026-0001.</p>
+    </div>
+
+    <form class="card inline-form no-print" id="search-form" novalidate>
+        <div class="field">
+            <label for="appointmentNo">Appointment number</label>
+            <input type="text" id="appointmentNo" name="appointmentNo" maxlength="15" placeholder="APT-2026-0001"
+                   autocomplete="off" style="text-transform:uppercase">
+        </div>
+        <button type="submit" class="btn">Search</button>
+    </form>
+
+    <div id="message" class="hidden"></div>
+
+    <section class="card hidden" id="result">
+        <h2>Appointment <span id="r-number"></span> <span id="r-status"></span></h2>
+
+        <h3>Patient</h3>
+        <dl class="details">
+            <dt>Patient name</dt><dd id="r-patient"></dd>
+            <dt>Address</dt><dd id="r-address"></dd>
+            <dt>Contact number</dt><dd id="r-contact"></dd>
+        </dl>
+
+        <h3 style="margin-top:1.1rem">Appointment</h3>
+        <dl class="details">
+            <dt>Dentist</dt><dd id="r-dentist"></dd>
+            <dt>Treatment type</dt><dd id="r-treatment"></dd>
+            <dt>Date</dt><dd id="r-date"></dd>
+            <dt>Time</dt><dd id="r-time"></dd>
+            <dt>Treatment cost</dt><dd id="r-cost"></dd>
+            <dt>Consultation fee</dt><dd id="r-fee"></dd>
+            <dt>Registered by</dt><dd id="r-by"></dd>
+        </dl>
+
+        <div class="actions">
+            <a class="btn" id="bill-link" href="billing.html">Calculate / Print Bill</a>
+            <button type="button" class="btn danger" id="cancel-button">Cancel Appointment</button>
+            <button type="button" class="btn secondary" onclick="window.print()">Print Details</button>
+        </div>
+    </section>
+</main>
+
+<script src="js/common.js"></script>
+<script>
+    const form = document.getElementById('search-form');
+    const message = document.getElementById('message');
+    const result = document.getElementById('result');
+    const cancelButton = document.getElementById('cancel-button');
+    const billLink = document.getElementById('bill-link');
+    let current = null;
+
+    function text(id, value) { document.getElementById(id).textContent = value; }
+
+    function show(appointment) {
+        current = appointment;
+        text('r-number', appointment.appointmentNo);
+        document.getElementById('r-status').innerHTML = statusBadge(appointment.status);
+        text('r-patient', appointment.patient.patientName);
+        text('r-address', appointment.patient.address);
+        text('r-contact', appointment.patient.contactNumber);
+        text('r-dentist', appointment.dentist.dentistName + ' (' + appointment.dentist.specialization + ')');
+        text('r-treatment', appointment.treatment.treatmentName);
+        text('r-date', formatDate(appointment.appointmentDate));
+        text('r-time', formatTime(appointment.appointmentTime));
+        text('r-cost', formatMoney(appointment.treatment.treatmentCost));
+        text('r-fee', formatMoney(appointment.dentist.consultationFee));
+        text('r-by', appointment.createdBy);
+
+        billLink.href = 'billing.html?no=' + encodeURIComponent(appointment.appointmentNo);
+        billLink.textContent = appointment.status === 'COMPLETED' ? 'View / Print Bill' : 'Calculate / Print Bill';
+
+        billLink.classList.toggle('hidden', appointment.status === 'CANCELLED');
+        cancelButton.classList.toggle('hidden', appointment.status !== 'BOOKED');
+        result.classList.remove('hidden');
+    }
+
+    async function search(appointmentNo) {
+        hideMessage(message);
+        result.classList.add('hidden');
+        const number = appointmentNo.trim().toUpperCase();
+        if (!number) {
+            showMessage(message, 'error', 'Please enter an appointment number.');
+            return;
+        }
+        if (!/^APT-\d{4}-\d{4,6}$/.test(number)) {
+            showMessage(message, 'error', 'Appointment number must look like APT-2026-0001.');
+            return;
+        }
+        try {
+            show(await api('GET', 'api/appointments/' + encodeURIComponent(number)));
+        } catch (error) {
+            showMessage(message, error.status === 404 ? 'warn' : 'error', error.message);
+        }
+    }
+
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        search(form.elements.appointmentNo.value);
+    });
+
+    cancelButton.addEventListener('click', async function () {
+        const sure = await confirmDialog('Cancel this appointment?',
+            'Appointment ' + current.appointmentNo + ' for ' + current.patient.patientName +
+            ' will be cancelled and the time slot becomes free. This cannot be undone.', 'Yes, cancel it');
+        if (!sure) { return; }
+        try {
+            const updated = await api('PUT', 'api/appointments/' + encodeURIComponent(current.appointmentNo) + '/status',
+                { status: 'CANCELLED' });
+            show(updated);
+            showMessage(message, 'success', 'Appointment ' + updated.appointmentNo + ' has been cancelled.');
+        } catch (error) {
+            showMessage(message, 'error', error.message);
+        }
+    });
+
+    initPage('search').then(function () {
+        const fromLink = queryParam('no');
+        if (fromLink) {
+            form.elements.appointmentNo.value = fromLink;
+            search(fromLink);
+        } else {
+            form.elements.appointmentNo.focus();
+        }
+    }).catch(function () { });
+</script>
+</body>
+</html>

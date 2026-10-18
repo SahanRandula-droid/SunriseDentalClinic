@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Register New Appointment - Sunrise Dental Clinic</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header id="app-header"></header>
+
+<main class="container">
+    <div class="page-head">
+        <h1>Register New Appointment</h1>
+        <p>Fields marked <span style="color:#b3261e">*</span> are required. The appointment number is created automatically.</p>
+    </div>
+
+    <div id="message" class="hidden"></div>
+
+    <section class="card hidden" id="success-card">
+        <h2>Appointment registered</h2>
+        <p>Give this number to the patient. It is needed to find the appointment and to print the bill.</p>
+        <p class="big-number" id="new-number"></p>
+        <dl class="details" id="new-summary"></dl>
+        <div class="actions">
+            <a class="btn" id="view-link" href="search.html">View full details</a>
+            <button type="button" class="btn secondary" id="another-button">Register another appointment</button>
+        </div>
+    </section>
+
+    <form class="card" id="appointment-form" novalidate>
+        <h2>Patient details</h2>
+        <div class="grid-2">
+            <div class="field">
+                <label for="patientName">Patient name <span class="req">*</span></label>
+                <input type="text" id="patientName" name="patientName" maxlength="100" autocomplete="off">
+                <div class="field-error"></div>
+            </div>
+            <div class="field">
+                <label for="contactNumber">Contact number <span class="req">*</span></label>
+                <input type="tel" id="contactNumber" name="contactNumber" maxlength="20" inputmode="numeric"
+                       placeholder="0771234567" autocomplete="off">
+                <div class="field-error"></div>
+            </div>
+            <div class="field span-2">
+                <label for="address">Address <span class="req">*</span></label>
+                <textarea id="address" name="address" maxlength="255"></textarea>
+                <div class="field-error"></div>
+            </div>
+        </div>
+
+        <h2 style="margin-top:1.2rem">Appointment details</h2>
+        <div class="grid-2">
+            <div class="field">
+                <label for="dentistId">Dentist <span class="req">*</span></label>
+                <select id="dentistId" name="dentistId">
+                    <option value="">Loading...</option>
+                </select>
+                <div class="field-error"></div>
+            </div>
+            <div class="field">
+                <label for="treatmentId">Treatment type <span class="req">*</span></label>
+                <select id="treatmentId" name="treatmentId">
+                    <option value="">Loading...</option>
+                </select>
+                <div class="field-error"></div>
+            </div>
+            <div class="field">
+                <label for="appointmentDate">Appointment date <span class="req">*</span></label>
+                <input type="date" id="appointmentDate" name="appointmentDate">
+                <div class="field-error"></div>
+            </div>
+            <div class="field">
+                <label for="appointmentTime">Appointment time <span class="req">*</span></label>
+                <select id="appointmentTime" name="appointmentTime">
+                    <option value="">Select a time</option>
+                </select>
+                <div class="hint">The clinic is open 8:00 AM to 8:00 PM. Appointments are 30 minutes apart.</div>
+                <div class="field-error"></div>
+            </div>
+        </div>
+
+        <p class="msg info" id="estimate" style="margin-top:1rem">Select a dentist and a treatment to see the estimated cost.</p>
+
+        <div class="actions">
+            <button type="submit" class="btn" id="save-button">Save Appointment</button>
+            <button type="reset" class="btn secondary">Clear Form</button>
+            <a class="btn secondary" href="index.html">Back to Main Menu</a>
+        </div>
+    </form>
+</main>
+
+<script src="js/common.js"></script>
+<script>
+    const form = document.getElementById('appointment-form');
+    const message = document.getElementById('message');
+    const successCard = document.getElementById('success-card');
+    const saveButton = document.getElementById('save-button');
+    const estimate = document.getElementById('estimate');
+
+    const MAX_DAYS_AHEAD = 180;
+    let dentists = [];
+    let treatments = [];
+
+    function buildTimeOptions() {
+        const select = form.elements.appointmentTime;
+        for (let minutes = 8 * 60; minutes <= 19 * 60 + 30; minutes += 30) {
+            const value = String(Math.floor(minutes / 60)).padStart(2, '0') + ':' + String(minutes % 60).padStart(2, '0');
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = formatTime(value);
+            select.appendChild(option);
+        }
+    }
+
+    function setDateLimits() {
+        const today = new Date();
+        const last = new Date();
+        last.setDate(today.getDate() + MAX_DAYS_AHEAD);
+        form.elements.appointmentDate.min = toIsoDate(today);
+        form.elements.appointmentDate.max = toIsoDate(last);
+    }
+
+    async function loadLists() {
+        dentists = await api('GET', 'api/dentists');
+        treatments = await api('GET', 'api/treatments');
+
+        form.elements.dentistId.innerHTML = '<option value="">Select a dentist</option>' +
+            dentists.map(function (d) {
+                return '<option value="' + d.dentistId + '">' + escapeHtml(d.dentistName) + ' - ' +
+                    escapeHtml(d.specialization) + '</option>';
+            }).join('');
+
+        form.elements.treatmentId.innerHTML = '<option value="">Select a treatment</option>' +
+            treatments.map(function (t) {
+                return '<option value="' + t.treatmentId + '">' + escapeHtml(t.treatmentName) + ' (' +
+                    formatMoney(t.treatmentCost) + ')</option>';
+            }).join('');
+    }
+
+    function updateEstimate() {
+        const dentist = dentists.find(function (d) { return String(d.dentistId) === form.elements.dentistId.value; });
+        const treatment = treatments.find(function (t) { return String(t.treatmentId) === form.elements.treatmentId.value; });
+        if (!dentist || !treatment) {
+            estimate.textContent = 'Select a dentist and a treatment to see the estimated cost.';
+            return;
+        }
+        const total = Number(dentist.consultationFee) + Number(treatment.treatmentCost);
+        estimate.textContent = 'Estimated cost: ' + formatMoney(treatment.treatmentCost) + ' treatment + ' +
+            formatMoney(dentist.consultationFee) + ' consultation fee = ' + formatMoney(total) + ' (before any discount).';
+    }
+
+    function validate(data) {
+        const errors = {};
+        if (!data.patientName) {
+            errors.patientName = 'Patient name is required.';
+        } else if (!/^[A-Za-z][A-Za-z .'-]{2,99}$/.test(data.patientName)) {
+            errors.patientName = 'Patient name must be 3-100 letters (spaces, dots and hyphens allowed).';
+        }
+        if (!data.contactNumber) {
+            errors.contactNumber = 'Contact number is required.';
+        } else if (!/^0\d{9}$/.test(data.contactNumber)) {
+            errors.contactNumber = 'Contact number must be 10 digits starting with 0 (e.g. 0771234567).';
+        }
+        if (!data.address) {
+            errors.address = 'Address is required.';
+        } else if (data.address.length < 5) {
+            errors.address = 'Address must be between 5 and 255 characters.';
+        }
+        if (!data.dentistId) { errors.dentistId = 'Please select a dentist.'; }
+        if (!data.treatmentId) { errors.treatmentId = 'Please select a treatment type.'; }
+        if (!data.appointmentDate) {
+            errors.appointmentDate = 'Appointment date is required.';
+        } else if (data.appointmentDate < toIsoDate()) {
+            errors.appointmentDate = 'Appointment date cannot be in the past.';
+        }
+        if (!data.appointmentTime) { errors.appointmentTime = 'Appointment time is required.'; }
+        return errors;
+    }
+
+    function readForm() {
+        return {
+            patientName: form.elements.patientName.value.trim().replace(/\s+/g, ' '),
+            address: form.elements.address.value.trim().replace(/\s+/g, ' '),
+            contactNumber: form.elements.contactNumber.value.trim(),
+            dentistId: form.elements.dentistId.value,
+            treatmentId: form.elements.treatmentId.value,
+            appointmentDate: form.elements.appointmentDate.value,
+            appointmentTime: form.elements.appointmentTime.value
+        };
+    }
+
+    function showSuccess(appointment) {
+        document.getElementById('new-number').textContent = appointment.appointmentNo;
+        document.getElementById('new-summary').innerHTML =
+            '<dt>Patient</dt><dd>' + escapeHtml(appointment.patient.patientName) + '</dd>' +
+            '<dt>Dentist</dt><dd>' + escapeHtml(appointment.dentist.dentistName) + '</dd>' +
+            '<dt>Treatment</dt><dd>' + escapeHtml(appointment.treatment.treatmentName) + '</dd>' +
+            '<dt>Date and time</dt><dd>' + formatDate(appointment.appointmentDate) + ' at ' +
+            formatTime(appointment.appointmentTime) + '</dd>';
+        document.getElementById('view-link').href = 'search.html?no=' + encodeURIComponent(appointment.appointmentNo);
+        form.classList.add('hidden');
+        successCard.classList.remove('hidden');
+        window.scrollTo(0, 0);
+    }
+
+    form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        hideMessage(message);
+        const data = readForm();
+        const errors = validate(data);
+        showFieldErrors(form, errors);
+        if (Object.keys(errors).length > 0) {
+            showMessage(message, 'error', 'Please correct the highlighted fields.');
+            return;
+        }
+
+        saveButton.disabled = true;
+        saveButton.textContent = 'Saving...';
+        try {
+            const appointment = await api('POST', 'api/appointments', data);
+            showSuccess(appointment);
+        } catch (error) {
+            showFieldErrors(form, error.fields);
+            showMessage(message, 'error', error.message);
+            window.scrollTo(0, 0);
+        } finally {
+            saveButton.disabled = false;
+            saveButton.textContent = 'Save Appointment';
+        }
+    });
+
+    form.addEventListener('reset', function () {
+        hideMessage(message);
+        showFieldErrors(form, {});
+        setTimeout(updateEstimate, 0);
+    });
+
+    form.elements.contactNumber.addEventListener('input', function () {
+        this.value = this.value.replace(/\D/g, '').substring(0, 10);
+    });
+    form.elements.dentistId.addEventListener('change', updateEstimate);
+    form.elements.treatmentId.addEventListener('change', updateEstimate);
+
+    document.getElementById('another-button').addEventListener('click', function () {
+        form.reset();
+        successCard.classList.add('hidden');
+        form.classList.remove('hidden');
+        form.elements.patientName.focus();
+    });
+
+    initPage('register').then(function () {
+        buildTimeOptions();
+        setDateLimits();
+        return loadLists();
+    }).catch(function (error) {
+        if (error.status !== 401) { showMessage(message, 'error', error.message); }
+    });
+</script>
+</body>
+</html>

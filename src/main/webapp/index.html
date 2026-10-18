@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Main Menu - Sunrise Dental Clinic</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header id="app-header"></header>
+
+<main class="container">
+    <div class="page-head">
+        <h1 id="welcome">Main Menu</h1>
+        <p>Choose what you would like to do.</p>
+    </div>
+
+    <div class="menu-grid">
+        <a class="menu-tile" href="register.html">
+            <span class="menu-num">1</span>
+            <span><strong>Register New Appointment</strong>
+                <span class="desc">Add a patient and book a dentist, treatment, date and time.</span></span>
+        </a>
+        <a class="menu-tile" href="search.html">
+            <span class="menu-num">2</span>
+            <span><strong>Display Appointment Details</strong>
+                <span class="desc">Search with the appointment number and see everything about the visit.</span></span>
+        </a>
+        <a class="menu-tile" href="billing.html">
+            <span class="menu-num">3</span>
+            <span><strong>Calculate and Print Bill</strong>
+                <span class="desc">Work out the total cost and print the patient's receipt.</span></span>
+        </a>
+        <a class="menu-tile" href="schedule.html">
+            <span class="menu-num">4</span>
+            <span><strong>Daily Schedule</strong>
+                <span class="desc">See every appointment booked for a chosen day.</span></span>
+        </a>
+        <a class="menu-tile hidden" href="reports.html" id="tile-reports">
+            <span class="menu-num">5</span>
+            <span><strong>Reports</strong>
+                <span class="desc">Income by treatment and dentist workload (administrators only).</span></span>
+        </a>
+        <a class="menu-tile" href="help.html">
+            <span class="menu-num" id="num-help">5</span>
+            <span><strong>Help</strong>
+                <span class="desc">Step-by-step instructions for new staff.</span></span>
+        </a>
+        <button type="button" class="menu-tile exit" id="tile-exit">
+            <span class="menu-num" id="num-exit">6</span>
+            <span><strong>Exit System</strong>
+                <span class="desc">Log out and close the application safely.</span></span>
+        </button>
+    </div>
+</main>
+
+<script src="js/common.js"></script>
+<script>
+    initPage('menu').then(function (user) {
+        document.getElementById('welcome').textContent = 'Welcome, ' + user.fullName;
+        if (user.role === 'ADMIN') {
+            document.getElementById('tile-reports').classList.remove('hidden');
+            document.getElementById('num-help').textContent = '6';
+            document.getElementById('num-exit').textContent = '7';
+        }
+        document.getElementById('tile-exit').addEventListener('click', exitSystem);
+    }).catch(function () {  });
+</script>
+</body>
+</html>
